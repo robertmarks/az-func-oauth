@@ -37,35 +37,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Gatsby Cache Folder
-        uses: actions/cache@v1
-        id: gatsby-cache-folder
-        with:
-          path: .cache
-          key: ${{ runner.os }}-cache-gatsby
-          restore-keys: |
-            ${{ runner.os }}-cache-gatsby
-
-      - name: Gatsby Public Folder
-        uses: actions/cache@v1
-        id: gatsby-public-folder
-        with:
-          path: public/
-          key: ${{ runner.os }}-public-gatsby
-          restore-keys: |
-            ${{ runner.os }}-public-gatsby
-
-      - name: NPM CI
-        run: npm ci
-
-      - name: NPM Build
-        run: npm run build
-        env:
-          # incremental builds
-          # https://www.gatsbyjs.org/docs/page-build-optimizations-for-incremental-data-changes/
-          GATSBY_EXPERIMENTAL_PAGE_BUILD_ON_DATA_CHANGES: true
-          NODE_ENV: production
-
       - name: Azure Login
         uses: Azure/login@v1
         with:
@@ -113,14 +84,3 @@ jobs:
           package: ./oauthfunc
           scm-do-build-during-deployment: true
           enable-oryx-build: true
-
-      - name: Azure CLI Action
-        uses: Azure/cli@1.0.4
-        with:
-          # Specify the script here
-          inlineScript: |
-            az storage blob service-properties update --404-document 404.html --account-name ${{ env.STORAGE_ACCOUNT_NAME}} --account-key "${{steps.deploy.outputs.storageKey}}" --index-document index.html --static-website true
-            az storage blob upload-batch -d '$web' --account-name ${{ env.STORAGE_ACCOUNT_NAME}} --account-key ${{steps.deploy.outputs.storageKey}} -s ./public
-            az cdn endpoint purge --content-paths /* --resource-group ${{ env.RESOURCE_GROUP_NAME}} --profile-name cdn-profile-${{ env.STORAGE_ACCOUNT_NAME}} --name cdn-endpoint-${{ env.STORAGE_ACCOUNT_NAME}}
-            az cdn endpoint rule add -g ${{ env.RESOURCE_GROUP_NAME}} -n cdn-endpoint-${{ env.STORAGE_ACCOUNT_NAME}} --profile-name cdn-profile-${{ env.STORAGE_ACCOUNT_NAME}} --order 1 --rule-name "redirect" --match-variable RequestScheme --operator Equal --match-values HTTP --action-name "UrlRedirect" --redirect-protocol Https --redirect-type Found
-          # Azure CLI version to be used to execute the script. If not provided, latest version is used
